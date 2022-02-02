@@ -22,8 +22,9 @@ theme_set(theme_bw() + theme( legend.position="bottom" ) +
              theme( text = element_text(size=16, face="bold")) +
             theme(axis.text.x=element_text(angle=60, hjust=1)))
 
-# R1states <- c('CT', 'MA', 'ME', 'NH', 'RI', 'VT') # FEMA Region 1
-# R1stfips <- c('09','25','23','33','44','50', '36') # FIPS of states in New England + NY
+R1states <- c('CT', 'MA', 'ME', 'NH', 'RI', 'VT') # FEMA Region 1
+R1stfips <- c('09','25','23','33','44','50', '36') # FIPS of states in New England + NY
+
 # R2states <- c('NY', 'NJ', 'PR')
 # R3states <- c('DE', 'DC', 'MD', 'PA', 'VA', 'WV')
 # R4states <- c('AL', 'FL', 'GA', 'KY', 'MS', 'NC', 'SC', 'TN') # Region 4
@@ -34,8 +35,11 @@ theme_set(theme_bw() + theme( legend.position="bottom" ) +
 # R9states <- c('AZ', 'CA', 'HI', 'NV') # Some Islands Missing Abriviations
 # R10states <- c('AK', 'ID', 'OR', 'WA')
 
-target_states <- c('DC', 'MS', 'NC', 'AK', 'NH', 'IL') # c('FL', 'MS', 'TX', 'CA') # Non-New England States to Compare
-target_statefips <- c('11','28','37','02', '33', '17')
+# target_states <- c('DC', 'MS', 'NC', 'AK', 'NH', 'IL') # c('FL', 'MS', 'TX', 'CA') # Non-New England States to Compare
+# target_statefips <- c('11','28','37','02', '33', '17')
+
+target_states <- R1states
+target_statefips <- R1stfips
 ```
 
 
@@ -101,7 +105,7 @@ daily_cases_by_state_rates <- cases_by_state %>%
 
 daily_cases_by_state <- daily_cases_by_state %>%
   group_by(Province_State) %>%
-  mutate(
+  mutate( # 7-day moving AVG
     daily_cases = rollmean(daily_cases, k=7, fill = NA)
     )
 
@@ -134,7 +138,7 @@ summary(facility %>%
 
 
 
-Aggregate by state
+# Aggregate by state - THESE ARE THE MAJOR TABLES
 ```{r}
 state_d <- facility %>%
   group_by(state, collection_date) %>%
@@ -255,57 +259,57 @@ region <- region_ma %>%
 
 Hospitals
 ```{r}
-state_d_h <- facility %>%
-  group_by(hospital_name, collection_date, state) %>%
-  summarise(
-            total_all_beds = sum(total_beds, na.rm = TRUE)
-            , inpatient_all_beds = sum(inpatient_beds, na.rm = TRUE)
-            , icu_all_beds = sum(total_icu_beds, na.rm = TRUE)
-            , total_child_beds = total_all_beds - sum(all_adult_hospital_beds, na.rm = TRUE)
-            , inpatient_child_beds = inpatient_all_beds - sum(all_adult_hospital_inpatient_beds, na.rm = TRUE)
-            , icu_child_beds = icu_all_beds - sum(total_staffed_adult_icu_beds, na.rm = TRUE)
-            , inpatient_all_beds_used = sum(inpatient_beds_used, na.rm = TRUE)
-            , inpatient_child_beds_used = inpatient_all_beds_used - sum(all_adult_hospital_inpatient_bed_occupied, na.rm = TRUE)
-            , icu_all_beds_used = sum(icu_beds_used, na.rm = TRUE)
-            , icu_child_beds_used = icu_all_beds_used - sum(staffed_adult_icu_bed_occupancy, na.rm = TRUE)
-            , total_child_beds_used_covid_confirmed = sum(total_pediatric_patients_hospitalized_confirmed_covid, na.rm = TRUE)
-            , total_child_beds_used_covid = sum(total_pediatric_patients_hospitalized_confirmed_and_suspected_covid, na.rm = TRUE)
-            , total_all_beds_used_covid = total_child_beds_used_covid + sum(total_adult_patients_hospitalized_confirmed_and_suspected_covid, na.rm = TRUE)
-            , admission_child_covid_confirmed = sum(previous_day_admission_pediatric_covid_confirmed, na.rm = TRUE)
-            , admission_child_covid = admission_child_covid_confirmed +
-                                            sum(previous_day_admission_pediatric_covid_suspected, na.rm = TRUE)
-            , admission_all_covid = admission_child_covid 
-                                        + sum(previous_day_admission_adult_covid_suspected 
-                                              + previous_day_admission_adult_covid_confirmed
-                                              , na.rm = TRUE)
-            , non_child_covid_utilization = (inpatient_all_beds_used - total_child_beds_used_covid)/total_all_beds
-            , non_covid_utilization = (inpatient_all_beds_used - total_all_beds_used_covid)/inpatient_all_beds
-            , total_utilization = (inpatient_all_beds_used)/inpatient_all_beds
-            , covid_deaths = sum(deaths_covid, na.rm = TRUE)
-            , staffing_shortage_yes = sum(critical_staffing_shortage_today == 'yes', na.rm = TRUE)
-            , .groups = 'keep')
-
-# moving average of the variables above
-state_ma_h <- state_d_h[order(state_d_h$hospital_name, state_d_h$collection_date, state_d_h$state),] %>%
-  group_by(hospital_name) %>%
-  mutate(
-            total_all_beds = rollmean(total_all_beds, k=7, fill=NA)
-            , inpatient_all_beds = rollmean(inpatient_all_beds, k=7, fill=NA)
-            , icu_all_beds = rollmean(icu_all_beds, k=7, fill=NA)
-            , total_child_beds = rollmean(total_child_beds, k=7, fill=NA)
-            , inpatient_child_beds = rollmean(inpatient_child_beds, k=7, fill=NA)
-            , icu_child_beds = rollmean(icu_child_beds, k=7, fill=NA)
-            , total_all_beds_used_covid = rollmean(total_all_beds_used_covid, k=7, fill=NA)
-            , total_child_beds_used_covid_confirmed = rollmean(total_child_beds_used_covid_confirmed, k=7, fill=NA)
-            , total_child_beds_used_covid = rollmean(total_child_beds_used_covid, k=7, fill=NA)
-            , admission_all_covid = rollmean(admission_all_covid, k=7, fill=NA)
-            , admission_child_covid_confirmed = rollmean(admission_child_covid_confirmed, k=7, fill=NA)
-            , admission_child_covid = rollmean(admission_child_covid, k=7, fill=NA)
-            , non_child_covid_utilization = rollmean(non_child_covid_utilization, k=7, fill=NA)
-            , non_covid_utilization = rollmean(non_covid_utilization, k=7, fill=NA)
-            , total_utilization = rollmean(total_utilization, k=7, fill=NA)
-            , covid_deaths = rollmean(covid_deaths, k=7, fill=NA)
-            ) 
+# state_d_h <- facility %>%
+#   group_by(hospital_name, collection_date, state) %>%
+#   summarise(
+#             total_all_beds = sum(total_beds, na.rm = TRUE)
+#             , inpatient_all_beds = sum(inpatient_beds, na.rm = TRUE)
+#             , icu_all_beds = sum(total_icu_beds, na.rm = TRUE)
+#             , total_child_beds = total_all_beds - sum(all_adult_hospital_beds, na.rm = TRUE)
+#             , inpatient_child_beds = inpatient_all_beds - sum(all_adult_hospital_inpatient_beds, na.rm = TRUE)
+#             , icu_child_beds = icu_all_beds - sum(total_staffed_adult_icu_beds, na.rm = TRUE)
+#             , inpatient_all_beds_used = sum(inpatient_beds_used, na.rm = TRUE)
+#             , inpatient_child_beds_used = inpatient_all_beds_used - sum(all_adult_hospital_inpatient_bed_occupied, na.rm = TRUE)
+#             , icu_all_beds_used = sum(icu_beds_used, na.rm = TRUE)
+#             , icu_child_beds_used = icu_all_beds_used - sum(staffed_adult_icu_bed_occupancy, na.rm = TRUE)
+#             , total_child_beds_used_covid_confirmed = sum(total_pediatric_patients_hospitalized_confirmed_covid, na.rm = TRUE)
+#             , total_child_beds_used_covid = sum(total_pediatric_patients_hospitalized_confirmed_and_suspected_covid, na.rm = TRUE)
+#             , total_all_beds_used_covid = total_child_beds_used_covid + sum(total_adult_patients_hospitalized_confirmed_and_suspected_covid, na.rm = TRUE)
+#             , admission_child_covid_confirmed = sum(previous_day_admission_pediatric_covid_confirmed, na.rm = TRUE)
+#             , admission_child_covid = admission_child_covid_confirmed +
+#                                             sum(previous_day_admission_pediatric_covid_suspected, na.rm = TRUE)
+#             , admission_all_covid = admission_child_covid 
+#                                         + sum(previous_day_admission_adult_covid_suspected 
+#                                               + previous_day_admission_adult_covid_confirmed
+#                                               , na.rm = TRUE)
+#             , non_child_covid_utilization = (inpatient_all_beds_used - total_child_beds_used_covid)/total_all_beds
+#             , non_covid_utilization = (inpatient_all_beds_used - total_all_beds_used_covid)/inpatient_all_beds
+#             , total_utilization = (inpatient_all_beds_used)/inpatient_all_beds
+#             , covid_deaths = sum(deaths_covid, na.rm = TRUE)
+#             , staffing_shortage_yes = sum(critical_staffing_shortage_today == 'yes', na.rm = TRUE)
+#             , .groups = 'keep')
+# 
+# # moving average of the variables above
+# state_ma_h <- state_d_h[order(state_d_h$hospital_name, state_d_h$collection_date, state_d_h$state),] %>%
+#   group_by(hospital_name) %>%
+#   mutate(
+#             total_all_beds = rollmean(total_all_beds, k=7, fill=NA)
+#             , inpatient_all_beds = rollmean(inpatient_all_beds, k=7, fill=NA)
+#             , icu_all_beds = rollmean(icu_all_beds, k=7, fill=NA)
+#             , total_child_beds = rollmean(total_child_beds, k=7, fill=NA)
+#             , inpatient_child_beds = rollmean(inpatient_child_beds, k=7, fill=NA)
+#             , icu_child_beds = rollmean(icu_child_beds, k=7, fill=NA)
+#             , total_all_beds_used_covid = rollmean(total_all_beds_used_covid, k=7, fill=NA)
+#             , total_child_beds_used_covid_confirmed = rollmean(total_child_beds_used_covid_confirmed, k=7, fill=NA)
+#             , total_child_beds_used_covid = rollmean(total_child_beds_used_covid, k=7, fill=NA)
+#             , admission_all_covid = rollmean(admission_all_covid, k=7, fill=NA)
+#             , admission_child_covid_confirmed = rollmean(admission_child_covid_confirmed, k=7, fill=NA)
+#             , admission_child_covid = rollmean(admission_child_covid, k=7, fill=NA)
+#             , non_child_covid_utilization = rollmean(non_child_covid_utilization, k=7, fill=NA)
+#             , non_covid_utilization = rollmean(non_covid_utilization, k=7, fill=NA)
+#             , total_utilization = rollmean(total_utilization, k=7, fill=NA)
+#             , covid_deaths = rollmean(covid_deaths, k=7, fill=NA)
+#             ) 
 ```
 
 
@@ -333,6 +337,7 @@ state_ma_rates <- state_d[order(state_d$state, state_d$collection_date),] %>%
 daily_cases_hosp_rates_full <- state_ma_rates %>%
   full_join(daily_cases_by_state_rates, by = c("state","collection_date"))
 
+# THIS IS IMPORTANT TO CALCULATE HOSPITALIZATION RATIOS (PER INCIDENCE)
 daily_cases_hosp_rates_full <- daily_cases_hosp_rates_full %>%
   group_by(state, week_year.y) %>%
   summarise(
@@ -349,7 +354,7 @@ daily_cases_hosp_rates_full <- daily_cases_hosp_rates_full %>%
 ```
 
 
-Look at this year's staffing shortages
+# IMPORTANT - Look at this year's staffing shortages
 ```{r}
 temp <- facility %>%
   filter(state %in% target_states & collection_date == '2021-12-29')
@@ -369,39 +374,41 @@ crit_shortage_hosp_day_or_week <- temp %>%
 ```
 
 # SLide Graph - Number of hospitals per state reporting lately
+# THIS IS IMPORTANT TO CHOOSE THE REFERENCE DATE FOR THE SLIDES
 ```{r, fig.height=4}
 state_d %>%
-  filter( state %in% target_states & collection_date > '2022-01-13') %>% 
+  filter( state %in% target_states & collection_date > '2022-01-17') %>% 
   mutate(r = staffing_shortage_yes/total_hosp_reporting) %>%
   select(state, collection_date, r, total_hosp_reporting)
 ```
 Staffing Shortage Graph
 ```{r, fig.height=4}
-# IMPORTANT
-date_most_hospitals_reported <- '2022-01-18'
+# IMPORTANT -- look table above to update this var
+date_most_hospitals_reported <- '2022-01-19'
 
 state_d %>%
   # filter( state %in% target_states & total_hosp_reporting > 5 & collection_date > '2020-09-01') %>% 
-  filter( state %in% target_states & collection_date > '2020-09-01' & collection_date <= date_most_hospitals_reported) %>% 
+  filter( state %in% target_states & collection_date > '2020-09-30' & collection_date <= date_most_hospitals_reported) %>% 
   mutate(r = staffing_shortage_yes/total_hosp_reporting) %>%
   ggplot(aes(x = collection_date, y = r)) + #, color = state
     facet_wrap(~ state, ncol = 2) + #scales = 'free_y' - For different axes
     geom_point(color = "grey55", size = 1) +
     geom_smooth(color = "blue", size = 1, span = 0.2) +
-    labs(x = NULL, y = 'Percent of Hospitals Reporting Shortages', title = 'Hospital Staffing Shortages') +
+    labs(x = NULL, y = NULL, title = 'Percent of Hospitals Reporting Staffing Shortages') +
     # scale_x_date(date_breaks = "2 month", date_labels =  "%b-%d-%Y") +
     scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "2 month"), date_labels =  "%b %d %Y") +
     scale_y_continuous(labels = scales::percent)
 ```
 ```{r}
 state_d %>%
-  filter( state == "DC" & collection_date > '2021-12-01') %>% 
+  filter( state == "MA" & collection_date > '2022-01-07') %>% 
   mutate(r = staffing_shortage_yes/total_hosp_reporting) %>%
   select(state, collection_date, r, staffing_shortage_yes, total_hosp_reporting)
 ```
 
 
-Join HHS and Census Data
+# Join HHS and Census Data
+# ADDS POPULATION TO THE STATE TABLE TO ENABLE CALCULATE ADMISSIONS, ETC. PER CAPITA
 ```{r}
 state_ma <- state_ma %>%
   full_join(df_population, by = "state")
@@ -411,12 +418,12 @@ state_ma <- state_ma %>%
 Hospital Admissions per 100,000 Ppl
 ```{r, fig.height=4}
 state_ma %>%
-  filter( state %in% target_states & collection_date > '2020-09-01' & collection_date <= date_most_hospitals_reported) %>%
+  filter( state %in% target_states & collection_date > '2020-09-30' & collection_date <= date_most_hospitals_reported) %>%
   mutate(r = (admission_all_covid/Population)*100000) %>%
   ggplot(aes(x = collection_date, y = r)) + #, color = state
     facet_wrap(~ state, ncol = 2) + #scales = 'free_y' - For different axes
     geom_line(color = "blue", size = 1) +
-    labs(x = NULL, y = 'COVID-19 Hospitalizations', title = 'COVID-19 Daily Hospital Admissions per 100K People,\n 7-day moving average') +
+    labs(x = NULL, y = NULL, title = 'COVID-19 Daily Hospital Admissions per 100K People,\n 7-day moving average') +
     # scale_x_date(date_breaks = "2 month", date_labels =  "%b-%d-%Y")
     scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "2 month"), date_labels = "%b %d %Y")
 ```
@@ -429,7 +436,8 @@ state_ma %>%
 ```
 
 
-Join HHS and Case Data
+# Join HHS and Case Data
+# THIS JOINS HOSPITAL DATA WITH INCIDENCE DATA
 ```{r}
 daily_cases_hosp <- state_ma %>%
   full_join(daily_cases_by_state, by = c("state","collection_date"))
@@ -438,12 +446,12 @@ daily_cases_hosp <- state_ma %>%
 # SLide = Hospital Utilization per State
 ```{r, fig.height=4}
 daily_cases_hosp %>%
-  filter(state %in% target_states & collection_date > '2020-09-15') %>%
+  filter(state %in% target_states & collection_date > '2020-09-30') %>%
   ggplot(aes(x = collection_date, y = total_utilization)) + 
     facet_wrap(~ state, ncol = 2) +
     geom_hline(yintercept = 0.8, color = 'orange', linetype='dashed') +
     geom_point(color = "gray55", size = 1) +
-    geom_smooth(color = "blue", size = 1, span = 0.1, se = FALSE) +
+    geom_smooth(color = "blue", size = 1, span = 0.2, se = FALSE) +
     labs(x = NULL, y = NULL, title = 'Total Hospital Utilization, 7-day Moving Average') +
     scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "2 month"), date_labels =  "%b %d %Y") +
     scale_y_continuous(labels=scales::percent, limits = c(0, 1))
@@ -453,14 +461,14 @@ daily_cases_hosp %>%
 Case Incidence (all, not just hospitalizations) Per 100,000 People
 ```{r, fig.height=4}
 daily_cases_hosp %>%
-  filter(state %in% target_states & collection_date > '2020-09-15') %>% 
+  filter(state %in% target_states & collection_date > '2020-09-30') %>% 
   mutate(r = (daily_cases/Population)*100000) %>%
   ggplot(aes(x = collection_date, y = r)) + #, color = state
-    facet_wrap(~ state, ncol = 2) + #scales = 'free_y' - For different axes
+    facet_wrap(~ state, ncol = 2) + # , scales = 'free_y') + # - For different axes
     # geom_line(color = "blue", size = 1) +
     geom_point(color = "gray45", size = 1) +
     geom_smooth(color = "blue", size = 1, span = 0.02, se = FALSE) +
-    labs(x = NULL, y = 'COVID-19 Cases', title = 'COVID-19 Daily Cases per 100K People, Weekly Average') +
+    labs(x = NULL, y = NULL, title = 'COVID-19 Daily Cases per 100K People, 7-day Moving Average') +
     scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "2 month"), date_labels =  "%b %d %Y")
 ```
 
@@ -473,7 +481,7 @@ state_summary <- daily_cases_hosp %>%
   mutate(maxdate = max(collection_date, na.rm = TRUE)) 
 #if (length(unique(state_summary$maxdate)) > 1){
   state_summary$maxdate = date_most_hospitals_reported # min(unique(state_summary$maxdate))
-  state_summary$maxdate = '2022-01-17' # min(unique(state_summary$maxdate))
+  #state_summary$maxdate = '2022-01-17' # min(unique(state_summary$maxdate))
 #}
 cols <- c('state', paste('Hospital Utilization as of', unique(state_summary$maxdate)))
 state_summary <- state_summary %>%
@@ -522,14 +530,14 @@ tmp <- state_d %>%
   mutate(r = staffing_shortage_yes/total_hosp_reporting) %>%
   filter(total_hosp_reporting > 5 & !is.na(r)) %>%
   group_by(state) %>%
-  filter((state != 'MA' & collection_date == date_most_hospitals_reported)
-         | (state == 'MA'& collection_date == '2022-01-09')) %>%
-  select(state, r, collection_date)
-colnames(tmp) <- c('state', 'Staffing Shortage', 'Shortage as of')
+#  filter((state != 'MA' & collection_date == date_most_hospitals_reported) | (state == 'MA'& collection_date == '2022-01-09')) %>%
+  filter(collection_date == date_most_hospitals_reported) %>%
+  select(state, r)
+colnames(tmp) <- c('state', paste('Staffing Shortage as of', date_most_hospitals_reported))
 
 state_summary <- state_summary %>%
-  left_join(tmp, by = c('state')) #%>%
-  #arrange(match(state, c("RI", "MA", "CT", "NH", "VT", "ME")))
+  left_join(tmp, by = c('state')) %>%
+  arrange(match(state, c("RI", "MA", "CT", "NH", "VT", "ME")))
 ```
 
 
@@ -543,7 +551,7 @@ COVID admissions are confirmed ONLY
 Hospitalization Rate
 ```{r, fig.height=4}
 daily_cases_hosp_rates_full %>%
-  filter(state %in% target_states & date > '2020-09-01') %>%
+  filter(state %in% target_states & date > '2020-09-30') %>%
   mutate(r = weekly_confirmed_covid_admissions/lag_cases) %>%
   filter(r < 2) %>%
   ggplot(aes(x = date, y = r)) + #, color = state
@@ -742,7 +750,7 @@ max(facility$collection_date)
 
 
 
-Code that is being retired
+# Code that is being retired
 -----------------------------------------------
 Staffing Shortage is a Graph Now not a table:
 Look at last year's staffing shortages

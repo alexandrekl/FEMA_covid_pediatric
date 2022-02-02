@@ -103,7 +103,7 @@ hrr_ma <- hrr_d[order(hrr_d$hrr, hrr_d$collection_date),] %>%
 
 ```{r}
 hrr_d_NE <- hrr_d %>%
-  filter( hrr %in% c(109,110,111,221,222,227,230,231,281,282,295,364,424) & collection_date > '2020-09-01') 
+  filter( hrr %in% c(109,110,111,221,222,227,230,231,281,282,295,364,424) & collection_date > '2020-09-30') 
 hrr_d_NE$hrr <- factor(hrr_d_NE$hrr, levels = c(109,110,111,221,222,227,230,231,281,282,364,424,295))
 hrr_d_NE <- hrr_d_NE%>%
   mutate(hrr=recode(hrr, 
@@ -142,10 +142,11 @@ hrr_d_NE %>%
 
 
 
-Graph Hospitalization - Averaging
+# Graph Hospitalization - Averaging
+# MORE IMPORTANT
 ```{r}
 hrr_ma_NE <- hrr_ma %>%
-  filter( hrr %in% c(109,110,111,221,222,227,230,231,281,282,295,364,424) & collection_date > '2020-09-01')
+  filter( hrr %in% c(109,110,111,221,222,227,230,231,281,282,295,364,424) & collection_date > '2020-09-30')
 hrr_ma_NE$hrr <- factor(hrr_ma_NE$hrr, levels = c(109,110,111,221,222,227,230,231,281,282,364,424,295))
 hrr_ma_NE <- hrr_ma_NE %>%
   mutate(hrr=recode(hrr, 
@@ -170,7 +171,7 @@ hrr_ma_NE %>%
     facet_wrap(~ hrr, ncol = 3) + #scales = 'free_y' - For different axes
     geom_hline(yintercept = 0.8, color = 'orange', linetype='dashed') +
     geom_line(color = "blue", size = 1) +
-    labs(x = NULL, y = 'COVID-19 Hospital Utilization', title = 'COVID-19 Total Hospital Utilization, 7-Day Moving Average') +
+    labs(x = NULL, y = NULL, title = 'Total Hospital Utilization, 7-Day Moving Average') +
     scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "2 month"), date_labels =  "%b %d %Y") +
     scale_y_continuous(labels=scales::percent, limits = c(0, 1)) +
     theme( text = element_text(size=12))

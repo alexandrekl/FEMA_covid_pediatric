@@ -16,7 +16,7 @@ theme_set(theme_bw() + theme( legend.position="bottom" ) +
              theme( text = element_text(size=16, face="bold")) +
             theme(axis.text.x=element_text(angle=60, hjust=1)))
 
-# R1states <- c('CT', 'MA', 'ME', 'NH', 'RI', 'VT') # FEMA Region 1
+R1states <- c('CT', 'MA', 'ME', 'NH', 'RI', 'VT') # FEMA Region 1
 # R2states <- c('NY', 'NJ', 'PR')
 # R3states <- c('DE', 'DC', 'MD', 'PA', 'VA', 'WV')
 # R4states <- c('AL', 'FL', 'GA', 'KY', 'MS', 'NC', 'SC', 'TN') # Region 4
@@ -27,7 +27,8 @@ theme_set(theme_bw() + theme( legend.position="bottom" ) +
 # R9states <- c('AZ', 'CA', 'HI', 'NV') # Some Islands Missing Abriviations
 # R10states <- c('AK', 'ID', 'OR', 'WA')
 
-target_states <- c('DC', 'MS', 'NC', 'AK', 'NH', 'IL') # c('FL', 'MS', 'TX', 'CA') # Non-New England States to Compare
+# target_states <- c('DC', 'MS', 'NC', 'AK', 'NH', 'IL') # c('FL', 'MS', 'TX', 'CA') # Non-New England States to Compare
+target_states <- R1states
 ```
 
 load data from Census Data: https://datacenter.kidscount.org/data/tables/101-child-population-by-age-group#detailed/2/2-53/false/1729,37/62,63,64,6,4693/419
@@ -44,17 +45,17 @@ df_child_counts <- df_child_counts %>%
 
 df_child_counts <- df_child_counts %>%
   mutate(region = case_when(
-    # state %in% R1states ~ "Region 1",
-    # state %in% R2states ~ "Region 2",
-    # state %in% R3states ~ "Region 3",
-    # state %in% R4states ~ "Region 4",
-    # state %in% R5states ~ "Region 5",
-    # state %in% R6states ~ "Region 6",
-    # state %in% R7states ~ "Region 7",
-    # state %in% R8states ~ "Region 8",
-    # state %in% R9states ~ "Region 9",
-    # state %in% R10states ~ "Region 10",
-    state %in% target_states ~ "Selected States"
+    state %in% R1states ~ "Region 1",
+    state %in% R2states ~ "Region 2",
+    state %in% R3states ~ "Region 3",
+    state %in% R4states ~ "Region 4",
+    state %in% R5states ~ "Region 5",
+    state %in% R6states ~ "Region 6",
+    state %in% R7states ~ "Region 7",
+    state %in% R8states ~ "Region 8",
+    state %in% R9states ~ "Region 9",
+    state %in% R10states ~ "Region 10"
+    # , state %in% target_states ~ "Selected States"
     ))
 
 df_child_counts$Data <- as.numeric(df_child_counts$Data) 
@@ -270,7 +271,7 @@ ne_chs <- c("CONNECTICUT CHILDRENS MEDICAL CENTER", "BOSTON CHILDREN'S HOSPITAL"
 
 
 state_ma_ch %>% 
-  filter( hospital_name %in% ne_chs & collection_date > '2020-09-01') %>%
+  filter( hospital_name %in% ne_chs & collection_date > '2020-09-30') %>%
   mutate(r1 = total_utilization) %>%
   mutate(r2 = non_child_covid_utilization) %>%
   ggplot() +  
@@ -285,7 +286,7 @@ state_ma_ch %>%
 
 ```{r}
 state_ma_ch %>% 
-  filter( hospital_name %in% ne_chs & collection_date %in% c(as.Date('2022-01-05'), as.Date('2022-01-12'))) %>%
+  filter( hospital_name %in% ne_chs & collection_date %in% c(as.Date('2022-01-12'), as.Date('2022-01-19'))) %>%
   mutate(r1 = total_utilization*100) %>%
   mutate(r2 = non_child_covid_utilization*100) %>%
   mutate(diff = r1-r2) %>%
@@ -312,13 +313,13 @@ state_ma <- state_ma %>%
 Pediatric Admission Incidence per 100,000 Children
 ```{r, fig.height=4}
 state_ma %>%
-  filter( state %in% target_states & collection_date > '2020-09-01') %>%
+  filter( state %in% target_states & collection_date > '2020-09-30') %>%
   mutate(r = admission_child_covid/as.numeric(Data)*100000) %>%
   ggplot(aes(x = collection_date, y = r)) + #, color = state
-    facet_wrap(~ state, ncol = 2, scales = 'free_y') + 
-    # geom_line(color = "blue", size = 1) +
-    geom_point(color = "gray55", size = 1) +
-    geom_smooth(color = "blue", size = 1, span = 0.05, se = FALSE) +
+    facet_wrap(~ state, ncol = 2) + #, scales = 'free_y') + 
+    geom_line(color = "blue", size = 1) +
+    # geom_point(color = "gray55", size = 1) +
+    # geom_smooth(color = "blue", size = 1, span = 0.1, se = FALSE) +
     labs(x = NULL, y = 'COVID-19 Pediatric Hospitalizations', title = 'COVID-19 Daily Hospital Admissions per 100K Children,\n 7-day moving average') +
     # scale_x_date(date_breaks = "2 month", date_labels =  "%b-%d-%Y")
     scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "2 month"), date_labels =  "%b %d %Y") +
@@ -326,15 +327,15 @@ state_ma %>%
 ```
 ## Slide - R1 and national 7-day averages
 ```{r, fig.height=4}
-col_date <- '2022-01-12'
+col_date <- '2022-01-19'
 state_ma %>%
-  filter( collection_date > col_date) %>%
+  filter( collection_date >= col_date) %>%
   ungroup() %>% group_by(collection_date) %>%
   summarise(US_7DAYAVG = mean(admission_child_covid/as.numeric(Data)*1e5, na.rm = TRUE))
 ```
 ```{r, fig.height=4}
 state_ma %>%
-  filter( state %in% target_states & collection_date > col_date) %>%
+  filter( state %in% target_states & collection_date >= col_date) %>%
   ungroup() %>% group_by(collection_date) %>%
   summarise(R1_7DAYAVERAGE = mean(admission_child_covid/as.numeric(Data)*1e5, na.rm = TRUE))
 ```
@@ -358,7 +359,7 @@ region_ma <- region_ma %>%
 Pediatric Case Incidence per 100,000 Children, Regionally
 ```{r, fig.height=4}
 region_ma %>%
-  filter(fema_region %in% c("Region 1", "Region 4", "Region 6", "Region 9") & collection_date > '2021-12-21') %>%
+  filter(fema_region %in% c("Region 1", "Region 4", "Region 6", "Region 9") & collection_date > '2022-01-11') %>%
   mutate(r = (admission_child_covid/child_population)*100000) #%>%
   #ggplot(aes(x = collection_date, y = r)) + #, color = fema_region
   #  facet_wrap(~ fema_region, ncol = 2) +     #, scales = 'free_y'
@@ -400,7 +401,7 @@ us_ma <- us_d[order(us_d$collection_date),] %>%
 
 ```{r}
 us_ma %>%
-  filter(collection_date > '2021-12-21') %>%
+  filter(collection_date > '2022-01-15') %>%
   mutate(r = (admission_child_covid / 73000000)*100000)
 ```
 

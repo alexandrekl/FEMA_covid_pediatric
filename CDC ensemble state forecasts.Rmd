@@ -13,6 +13,7 @@ editor_options:
 Tools for working with COVID-19 Forecast Hub data: covidHubUtils R package
 http://reichlab.io/covidHubUtils/articles/covidHubUtils-overview.html
 ```{r}
+# BEFORE RUNNING THIS NOTEBOOK, UNCOMMENT THIS CELL TO RUN THE COMMANDS BELOW
 # devtools::install_github("reichlab/zoltr")
 # devtools::install_github("reichlab/covidHubUtils")
 ```
@@ -27,14 +28,20 @@ theme_set(theme_bw() + theme( legend.position="bottom" ) +
              theme( text = element_text(size=16, face="bold")) +
             theme(axis.text.x=element_text(angle=60, hjust=1)))
 
-# R1stfips <- c('09', '25', '23', '33', '44', '50') # FIPS of states 
-target_statefips <- c('11','28','37','02', '33', '17')
+R1stfips <- c('09', '25', '23', '33', '44', '50') # FIPS of states 
+# target_statefips <- c('11','28','37','02', '33', '17')
+
+target_statefips <- R1stfips
+
 ```
 
 
-CDC ensemble forecasts for hospital admissions - https://github.com/reichlab/covid19-forecast-hub
+# CDC ensemble forecasts for hospital admissions - https://github.com/reichlab/covid19-forecast-hub
 
 ```{r}
+# IMPORTANT: SPECIFY DATE OF THE LATEST FORECAST
+date_latest_forecast <- "2022-01-24"
+ 
 # Load forecasts that were submitted in a time window from zoltar
 # inc_case_targets <- paste(1:4, "wk ahead inc case")
 # forecasts_case <- load_forecasts(
@@ -53,7 +60,7 @@ CDC ensemble forecasts for hospital admissions - https://github.com/reichlab/cov
 inc_hosp_targets <- paste(0:130, "day ahead inc hosp")
 forecasts_hosp <- load_forecasts(
   models = "COVIDhub-ensemble",
-  dates = "2022-01-17",
+  dates = date_latest_forecast,
   date_window_size = 6,
   locations = target_statefips, #"US",
   types = c("point", "quantile"),
@@ -86,9 +93,17 @@ truth_hosp <- load_truth(
   locations = target_statefips # "US"
 )
 ```
+smoothing
+```{r}
+truth_hosp_ma <- truth_hosp %>%
+  arrange(target_end_date) %>%
+  ungroup() %>% group_by(abbreviation) %>% 
+  mutate(admissions = zoo::rollmean(value, k = 7, align = "right", fill = NA)) 
+```
+
 ```{r}
 df_plot <- bind_rows(
-            truth_hosp
+            truth_hosp_ma 
             , forecasts_hosp %>%
                 filter(type == 'quantile') %>%
                 pivot_wider(names_from = quantile, names_prefix = 'quant', values_from = value)
@@ -105,15 +120,16 @@ plotFcst <- function(tit, df_plot, ylims){
                 seq.Date(as.Date('2020-11-15'), as.Date('2022-02-01'), "1 month")))
 ggplot(df_plot, aes(x = target_end_date)) +
     facet_wrap(~ abbreviation, ncol = 2, scales = 'free_y') + # - For different axes
-    geom_point(aes(y = value, color = "Reported"), size = 1) +
+    geom_line(aes(y = admissions, color = "Reported (with 7-d mov. average"), size = 1) +
+    geom_point(aes(y = value, color = "Reported (with 7-d mov. average"), size = 1.5) +
+    # geom_smooth(aes(y = value), color = "blue", size = 1, span = 0.3, se = FALSE) +
     scale_color_manual(name = NULL, values = c("blue")) +
-    geom_smooth(aes(y = value), color = "blue", size = 1, span = 0.1, se = FALSE) +
     geom_ribbon(aes(ymin = quant0.025, ymax = quant0.975, fill = "95% Prediction Interval"), size = 1) +
     geom_ribbon(aes(ymin = quant0.25, ymax = quant0.75, fill = "50% Prediction Interval"), size = 1) +
     scale_fill_manual(name = NULL, values = c("salmon3", "salmon1", "orangered4")) +
     geom_point(aes(y = quant0.5), color = "orangered4", size = 1) +
     geom_line(aes(y = quant0.5, fill = "Ensemble"), size = 1) +
-    labs(x = NULL, y = 'New Hospital Admissions', title = tit) +
+    labs(x = NULL, y = NULL, title = tit) +
     expand_limits(y = ylims) +
     scale_x_date(breaks = brks, date_labels =  "%b %d %Y") +
     guides(color = guide_legend(order=1),
@@ -121,11 +137,12 @@ ggplot(df_plot, aes(x = target_end_date)) +
 }
 ```
 ```{r, fig.height=4}
-plotFcst('Daily Hospital Admissions', df_plot, c(0, 100))
+plotFcst('New Hospital Admissions per day', df_plot, c(0, 100))
 ```
 ```{r, fig.height=4}
 plotFcst('Daily Hospital Admissions per 100K people', df_plot %>%
            mutate(value = value / population * 1e5
+                  , admissions = admissions / population * 1e5
                   , quant0.025 = quant0.025 / population * 1e5
                   , quant0.975 = quant0.975 / population * 1e5
                   , quant0.25 = quant0.25 / population * 1e5
@@ -137,17 +154,17 @@ plotFcst('Daily Hospital Admissions per 100K people', df_plot %>%
 # MA ONLY
 ```{r, fig.height=2.5}
 df_plot %>% 
-  filter(abbreviation == 'MA') %>%
+  filter(abbreviation == 'RI') %>%
   ggplot(aes(x = target_end_date)) +
     geom_point(aes(y = value, color = "Reported"), size = 1) +
     scale_color_manual(name = NULL, values = c("blue")) +
-    geom_smooth(aes(y = value), color = "blue", size = 1, span = 0.2, se = FALSE) +
+    geom_smooth(aes(y = value), color = "blue", size = 1, span = 0.3, se = FALSE) +
     geom_ribbon(aes(ymin = quant0.025, ymax = quant0.975, fill = "95% Prediction Interval"), size = 1) +
     geom_ribbon(aes(ymin = quant0.25, ymax = quant0.75, fill = "50% Prediction Interval"), size = 1) +
     scale_fill_manual(name = NULL, values = c("salmon3", "salmon1", "orangered4")) +
     geom_point(aes(y = quant0.5), color = "orangered4", size = 1) +
     geom_line(aes(y = quant0.5, fill = "Ensemble"), size = 1) +
-    labs(x = NULL, y = 'New Hospital Admissions', title = 'Massachusetts Daily Hospital Admission Forecast \nCDC Ensemble as of Jan 10th') +
+    labs(x = NULL, y = 'New Hospital Admissions', title = 'Rhode Island Daily Hospital Admission Forecast \nCDC Ensemble as of Jan 24th') +
     # expand_limits(y = ylims) +
     scale_x_date(breaks = sort(c(seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "1 month"),
                 seq.Date(as.Date('2020-11-15'), as.Date('2022-01-15'), "1 month")))
@@ -224,13 +241,13 @@ truth_death <- load_truth(
 
 ```{r, fig.height=4}
 truth_death %>%
-  filter(target_end_date > '2020-09-01') %>%
+  filter(target_end_date > '2020-09-30') %>%
   mutate(r = value/population * 1e5) %>%
 ggplot(aes(x = target_end_date, y = r)) +
     facet_wrap(~ abbreviation, ncol = 2) + # , scales = 'free_y' - For different axes
     geom_point(color = "grey45", size = 1) +
     geom_smooth(color = "blue", size = 1, span = 0.1, se = FALSE) +
-    labs(x = NULL, y = 'COVID-19 Deaths', title = 'COVID-19 Weekly Deaths per 100K people') +
+    labs(x = NULL, y = NULL, title = 'COVID-19 Weekly Deaths per 100K people') +
     # expand_limits(y = ylims) +
     scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "2 month"), date_labels =  "%b %d %Y")
 ```
@@ -255,7 +272,7 @@ death_rates <- truth_death %>%
 
 ```{r, fig.height=4}
 death_rates %>%
-  filter(target_end_date > '2020-09-01') %>%
+  filter(target_end_date > '2020-09-30') %>%
 ggplot(aes(x = target_end_date, y = death_rate)) +
     facet_wrap(~ abbreviation, ncol = 2) + # , scales = 'free_y' - For different axes
     geom_point(color = "grey45", size = 1) +
