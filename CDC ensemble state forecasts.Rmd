@@ -40,7 +40,7 @@ target_statefips <- R1stfips
 
 ```{r}
 # IMPORTANT: SPECIFY DATE OF THE LATEST FORECAST
-date_latest_forecast <- "2022-01-24"
+date_latest_forecast <- "2022-01-31"
  
 # Load forecasts that were submitted in a time window from zoltar
 # inc_case_targets <- paste(1:4, "wk ahead inc case")
@@ -225,6 +225,20 @@ truth_death <- load_truth(
   locations = target_statefips
 )
 ```
+```{r}
+truth_death_US <- load_truth(
+  truth_source = "JHU",
+  target_variable = "inc death",
+  locations = "US"
+)  
+```
+```{r}
+truth_death_US  %>%
+  tail(n = 1) %>%
+  mutate(per100K = value / population * 1e5) %>%
+  select(model, location, target_end_date, value, population, per100K)
+```
+
 # FOR PPT - Incidence Truth
 ```{r, fig.height=4}
 # truth_incidence_R1 %>%
@@ -253,9 +267,9 @@ ggplot(aes(x = target_end_date, y = r)) +
 ```
 ```{r}
 truth_death %>%
-  filter(target_end_date > '2022-01-05') %>%
+  filter(target_end_date > '2022-01-10') %>%
   mutate(r = value/population * 1e5) %>%
-  select(target_end_date, location_name, r)
+  select(target_end_date, location_name, r, value)
 ```
 ## DEATHS PER INCIDENCE
 ```{r}
@@ -282,15 +296,4 @@ ggplot(aes(x = target_end_date, y = death_rate)) +
     scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "2 month"), date_labels =  "%b %d %Y") +
     scale_y_continuous(labels = scales::percent)
 ```
-```{r, fig.height=4}
-death_rates %>%
-  filter(target_end_date > '2021-05-01') %>%
-ggplot(aes(x = target_end_date, y = death_rate)) +
-    facet_wrap(~ abbreviation, ncol = 2) + # , scales = 'free_y' - For different axes
-    geom_point(color = "grey45", size = 1) +
-    geom_smooth(color = "blue", size = 1, span = 0.1, se = FALSE) +
-    labs(x = NULL, y = NULL, title = 'COVID-19 Weekly Deaths per New Cases (with a 2-week case lag)') +
-    coord_cartesian(ylim = c(0, 0.04)) +
-    scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "2 month"), date_labels =  "%b %d %Y") +
-    scale_y_continuous(labels = scales::percent)
-```
+
