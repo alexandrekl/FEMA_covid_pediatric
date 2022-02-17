@@ -375,14 +375,14 @@ crit_shortage_hosp_day_or_week <- temp %>%
 # THIS IS IMPORTANT TO CHOOSE THE REFERENCE DATE FOR THE SLIDES
 ```{r, fig.height=4}
 state_d %>%
-  filter( state %in% target_states & collection_date > '2022-01-20') %>% 
+  filter( state %in% target_states & collection_date > '2022-01-30') %>% 
   mutate(r = staffing_shortage_yes/total_hosp_reporting) %>%
   select(state, collection_date, r, total_hosp_reporting)
 ```
 Staffing Shortage Graph
 ```{r, fig.height=4}
 # IMPORTANT -- look table above to update this var
-date_most_hospitals_reported <- '2022-01-26'
+date_most_hospitals_reported <- '2022-02-02'
 
 state_d %>%
   # filter( state %in% target_states & total_hosp_reporting > 5 & collection_date > '2020-09-01') %>% 
@@ -397,13 +397,6 @@ state_d %>%
     scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "2 month"), date_labels =  "%b %d %Y") +
     scale_y_continuous(labels = scales::percent)
 ```
-```{r}
-state_d %>%
-  filter( state == "MA" & collection_date > '2022-01-07') %>% 
-  mutate(r = staffing_shortage_yes/total_hosp_reporting) %>%
-  select(state, collection_date, r, staffing_shortage_yes, total_hosp_reporting)
-```
-
 
 # Join HHS and Census Data
 # ADDS POPULATION TO THE STATE TABLE TO ENABLE CALCULATE ADMISSIONS, ETC. PER CAPITA
@@ -428,7 +421,7 @@ state_ma %>%
 ## Slide - R1 Average of Hosp admissions
 ```{r}
 state_ma %>%
-  filter( state %in% target_states & collection_date > '2022-01-20') %>%
+  filter( state %in% target_states & collection_date > '2022-01-27') %>%
   ungroup() %>% group_by(collection_date) %>%
   summarise(r = sum(admission_all_covid) / sum(Population) * 1e5)
 ```
@@ -471,7 +464,7 @@ daily_cases_hosp %>%
     scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "2 month"), date_labels =  "%b %d %Y")
 ```
 
-# SLIDE: Resource Prioritization per State - REVIEW SHORTAGE DATE BELOW
+# SLIDE: Resource Prioritization per State - REVIEW DATES BELOW
 ```{r}
 state_summary <- daily_cases_hosp %>%
   filter(state %in% target_states) %>%
@@ -479,7 +472,8 @@ state_summary <- daily_cases_hosp %>%
   group_by(state) %>%
   mutate(maxdate = max(collection_date, na.rm = TRUE)) 
 #if (length(unique(state_summary$maxdate)) > 1){
-  state_summary$maxdate = date_most_hospitals_reported # min(unique(state_summary$maxdate))
+#  state_summary$maxdate = date_most_hospitals_reported
+  state_summary$maxdate = min(unique(state_summary$maxdate))
   #state_summary$maxdate = '2022-01-17' # min(unique(state_summary$maxdate))
 #}
 cols <- c('state', paste('Hospital Utilization as of', unique(state_summary$maxdate)))
@@ -592,7 +586,7 @@ region_ma <- region_ma %>%
 Admissions Incidence per 100,000 People, Regionally
 ```{r, fig.height=4}
 region_ma %>%
-  filter(fema_region %in% c("Region 1") & collection_date > '2022-01-21') %>% #& collection_date < '2020-12-25'
+  filter(fema_region %in% c("Region 1") & collection_date > '2022-01-27') %>% #& collection_date < '2020-12-25'
   mutate(r = (admission_all_covid/Population)* 1e5) %>%
   select(fema_region, collection_date, admission_all_covid, Population, r)
 
@@ -633,7 +627,7 @@ us_ma <- us_d[order(us_d$collection_date),] %>%
 Admissions per 100,000
 ```{r}
 us_ma %>%
-  filter(collection_date > '2022-01-21') %>%
+  filter(collection_date > '2022-01-27') %>%
   mutate(r = (admission_all_covid / 329500000)* 1e5) %>%
   select(collection_date, admission_all_covid, r)
 ```
@@ -643,7 +637,7 @@ us_ma %>%
 Hospital Utilization By State
 ```{r, fig.height = 4, fig.width = 4}
 state_ma %>%
-  filter(state %in% target_states & collection_date > '2022-01-21') %>%
+  filter(state %in% target_states & collection_date > '2022-01-27') %>%
   select(
     state
     , collection_date

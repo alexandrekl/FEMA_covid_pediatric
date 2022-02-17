@@ -125,7 +125,7 @@ hrr_d_NE <- hrr_d_NE%>%
 Graph Hospitalization - No Averaging
 ```{r, fig.height = 4, fig.width = 4}
 ### IMPORTANT ###
-date_most_hospitals_reported <- "2022-01-26"
+date_most_hospitals_reported <- "2022-02-02"
 
 hrr_d_NE %>%
   filter(collection_date <= date_most_hospitals_reported) %>%
@@ -135,7 +135,7 @@ hrr_d_NE %>%
     geom_line(color = "blue", size = 1) +
     # geom_point(color = "grey", size = 0.5) +
     # geom_smooth(color = "blue", size = 1, span = 0.01) +
-    labs(x = NULL, y = 'COVID-19 Total Hospital Utilization', title = 'COVID-19 Hospital Utilization') +
+    labs(x = NULL, y = NULL, title = 'COVID-19 Total Hospital Utilization') +
     # scale_x_date(date_breaks = "2 month", date_labels =  "%b %d %Y") +
     scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "2 month"), date_labels =  "%b %d %Y") +
     scale_y_continuous(labels=scales::percent, limits = c(0, 1)) +

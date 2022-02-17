@@ -37,10 +37,11 @@ target_statefips <- R1stfips
 
 
 # CDC ensemble forecasts for hospital admissions - https://github.com/reichlab/covid19-forecast-hub
+# FORECASTS UPDATED EVERY MONDAY AT 3PM ET
 
 ```{r}
 # IMPORTANT: SPECIFY DATE OF THE LATEST FORECAST
-date_latest_forecast <- "2022-01-31"
+date_latest_forecast <- "2022-02-07"
  
 # Load forecasts that were submitted in a time window from zoltar
 # inc_case_targets <- paste(1:4, "wk ahead inc case")
