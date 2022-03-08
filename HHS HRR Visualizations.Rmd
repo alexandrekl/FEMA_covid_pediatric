@@ -70,6 +70,7 @@ hrr_d <- facility %>%
             , non_child_covid_utilization = ((icu_all_beds_used + inpatient_all_beds_used) - total_child_beds_used_covid)/total_all_beds
             # , total_utilization = (inpatient_all_beds_used)/total_all_beds
             , total_utilization = inpatient_all_beds_used/inpatient_all_beds
+            , covid_utilization = total_all_beds_used_covid/inpatient_all_beds
             , icu_utilization = icu_all_beds_used/icu_all_beds
             , general_utilization = (inpatient_all_beds_used-icu_all_beds_used)/(inpatient_all_beds-icu_all_beds)
             , covid_deaths = sum(deaths_covid, na.rm = TRUE)
@@ -93,6 +94,7 @@ hrr_ma <- hrr_d[order(hrr_d$hrr, hrr_d$collection_date),] %>%
             , admission_child_covid = rollmean(admission_child_covid, k=7, fill=NA)
             , non_child_covid_utilization = rollmean(non_child_covid_utilization, k=7, fill=NA)
             , total_utilization = rollmean(total_utilization, k=7, fill=NA)
+            , covid_utilization = rollmean(covid_utilization, k=7, fill=NA)
             , icu_utilization = rollmean(icu_utilization, k=7, fill=NA)
             , general_utilization = rollmean(general_utilization, k=7, fill=NA)
             , covid_deaths = rollmean(covid_deaths, k=7, fill=NA)
@@ -125,7 +127,7 @@ hrr_d_NE <- hrr_d_NE%>%
 Graph Hospitalization - No Averaging
 ```{r, fig.height = 4, fig.width = 4}
 ### IMPORTANT ###
-date_most_hospitals_reported <- "2022-02-02"
+date_most_hospitals_reported <- "2022-03-06"
 
 hrr_d_NE %>%
   filter(collection_date <= date_most_hospitals_reported) %>%
@@ -137,7 +139,7 @@ hrr_d_NE %>%
     # geom_smooth(color = "blue", size = 1, span = 0.01) +
     labs(x = NULL, y = NULL, title = 'COVID-19 Total Hospital Utilization') +
     # scale_x_date(date_breaks = "2 month", date_labels =  "%b %d %Y") +
-    scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "2 month"), date_labels =  "%b %d %Y") +
+    scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-03-01'), "2 month"), date_labels =  "%b %d %Y") +
     scale_y_continuous(labels=scales::percent, limits = c(0, 1)) +
     theme( text = element_text(size=12))
 ```
@@ -148,8 +150,21 @@ hrr_d_NE %>%
   select(hrr, collection_date, total_utilization) %>%
   print.data.frame(right = FALSE)
 ```
-
-
+```{r, fig.height = 4, fig.width = 4}
+### IMPORTANT ###
+hrr_d_NE %>%
+  filter(collection_date <= date_most_hospitals_reported) %>%
+  ggplot(aes(x = collection_date, y = covid_utilization)) + #, color = state
+    facet_wrap(~ hrr, ncol = 3) + #scales = 'free_y' - For different axes
+    geom_line(color = "blue", size = 1) +
+    # geom_point(color = "grey", size = 0.5) +
+    # geom_smooth(color = "blue", size = 1, span = 0.01) +
+    labs(x = NULL, y = NULL, title = 'COVID-19 Utilization per HRR') +
+    # scale_x_date(date_breaks = "2 month", date_labels =  "%b %d %Y") +
+    scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-03-01'), "2 month"), date_labels =  "%b %d %Y") +
+    scale_y_continuous(labels=scales::percent) +
+    theme( text = element_text(size=12))
+```
 
 # Graph Hospitalization - Averaging
 ```{r}

@@ -41,7 +41,7 @@ target_statefips <- R1stfips
 
 ```{r}
 # IMPORTANT: SPECIFY DATE OF THE LATEST FORECAST
-date_latest_forecast <- "2022-02-07"
+date_latest_forecast <- "2022-03-07"
  
 # Load forecasts that were submitted in a time window from zoltar
 # inc_case_targets <- paste(1:4, "wk ahead inc case")
@@ -117,8 +117,8 @@ df_plot <- bind_rows(
 
 ```{r, fig.height=4}
 plotFcst <- function(tit, df_plot, ylims){
-  brks <- sort(c(seq.Date(as.Date('2020-11-01'), as.Date('2022-02-01'), "1 month"),
-                seq.Date(as.Date('2020-11-15'), as.Date('2022-02-01'), "1 month")))
+  brks <- sort(c(seq.Date(as.Date('2020-11-01'), as.Date('2022-04-01'), "1 month"),
+                seq.Date(as.Date('2020-11-15'), as.Date('2022-04-01'), "1 month")))
 ggplot(df_plot, aes(x = target_end_date)) +
     facet_wrap(~ abbreviation, ncol = 2, scales = 'free_y') + # - For different axes
     geom_line(aes(y = admissions, color = "Reported (with 7-d mov. average"), size = 1) +
@@ -202,9 +202,37 @@ truth_hosp_US %>%
 truth_incidence_R1 <- load_truth(
   truth_source = "JHU",
   target_variable = "inc case",
+  temporal_resolution = "daily",
   locations = target_statefips
 )
+```
+```{r, fig.height=4}
+daily_cases <- truth_incidence_R1 %>%
+  rename(state = abbreviation) %>%
+  rename(collection_date = target_end_date) %>%
+  group_by(state) %>% 
+  mutate(r = zoo::rollmean(value, k=7, fill=NA, align = 'right')/population * 1e5)
 
+daily_cases %>%
+  filter(state %in% target_states & collection_date > '2020-09-30') %>% 
+  ggplot(aes(x = collection_date, y = r)) + #, color = state
+    facet_wrap(~ state, ncol = 2) + # , scales = 'free_y') + # - For different axes
+    # geom_line(color = "blue", size = 1) +
+    geom_point(color = "gray45", size = 1) +
+    geom_smooth(color = "blue", size = 1, span = 0.02, se = FALSE) +
+    labs(x = NULL, y = NULL, title = 'COVID-19 Daily Cases per 100K People, 7-day Moving Average') +
+    scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-03-01'), "2 month"), date_labels =  "%b %d %Y") +
+    scale_y_continuous(limits = c(0, 400))
+```
+
+
+```{r}
+daily_cases %>%
+  filter(state %in% target_states & collection_date > '2022-02-24') %>%
+  select(state, collection_date, value, r)
+```
+
+```{r}
 truth_incidence_US <- load_truth(
   truth_source = "JHU",
   target_variable = "inc case",
@@ -264,11 +292,11 @@ ggplot(aes(x = target_end_date, y = r)) +
     geom_smooth(color = "blue", size = 1, span = 0.1, se = FALSE) +
     labs(x = NULL, y = NULL, title = 'COVID-19 Weekly Deaths per 100K people') +
     # expand_limits(y = ylims) +
-    scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-01-01'), "2 month"), date_labels =  "%b %d %Y")
+    scale_x_date(breaks = seq.Date(as.Date('2020-11-01'), as.Date('2022-03-01'), "2 month"), date_labels =  "%b %d %Y")
 ```
 ```{r}
 truth_death %>%
-  filter(target_end_date > '2022-01-10') %>%
+  filter(target_end_date > '2022-02-15') %>%
   mutate(r = value/population * 1e5) %>%
   select(target_end_date, location_name, r, value)
 ```
