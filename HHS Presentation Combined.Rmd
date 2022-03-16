@@ -326,7 +326,7 @@ df_plot <- bind_rows(
                 filter(type == 'quantile') %>%
                 pivot_wider(names_from = quantile, names_prefix = 'quant', values_from = value)
       ) %>%
-  filter(target_end_date > test_date #& !is.na(quant0.5)
+  filter(target_end_date > start_date #& !is.na(quant0.5)
          ) 
 
 
@@ -342,7 +342,7 @@ state_d %>%
 
 # Plot % of Hospitals per state reporting staffing shortages
 state_d %>%
-  filter( state %in% target_states & collection_date > test_date & collection_date <= date_most_hospitals_reported) %>% 
+  filter( state %in% target_states & collection_date > start_date & collection_date <= date_most_hospitals_reported) %>% 
   mutate(r = staffing_shortage_yes/total_hosp_reporting) %>%
   ggplot(aes(x = collection_date, y = r)) + #, color = state
     facet_wrap(~ state, ncol = 2) + #scales = 'free_y' - For different axes
@@ -357,7 +357,7 @@ state_d %>%
 ## COVID Case Incidence per state (Slide 3)
 ```{r, fig.height=4, fig.width=6}
 daily_cases_hosp %>%
-  filter(state %in% target_states & collection_date > test_date) %>% 
+  filter(state %in% target_states & collection_date > start_date) %>% 
   mutate(r = (daily_cases/Population)*100000) %>%
   ggplot(aes(x = collection_date, y = r)) + #, color = state
     facet_wrap(~ state, ncol = 2) + #scales = 'free_y' - For different axes
@@ -489,7 +489,7 @@ truth_death <- load_truth(
 
 # Plot COVID weekly deaths per 100k people
 truth_death %>%
-  filter(target_end_date > test_date) %>%
+  filter(target_end_date > start_date) %>%
   mutate(r = value/population * 1e5) %>%
 ggplot(aes(x = target_end_date, y = r)) +
     facet_wrap(~ abbreviation, ncol = 2) + # , scales = 'free_y' - For different axes
@@ -592,10 +592,23 @@ hrr_ma <- hrr_d[order(hrr_d$hrr, hrr_d$collection_date),] %>%
 ## Divide into Target HRRs
 ```{r}
 hrr_d_tar <- hrr_d %>%
-  filter( hrr %in% target_hrrs & collection_date > test_date) 
+  filter( hrr %in% target_hrrs & collection_date > start_date) 
 hrr_d_tar$hrr <- factor(hrr_d_tar$hrr, levels = target_hrrs)
 hrr_d_tar <- hrr_d_tar%>%
-  mutate(hrr=recode(hrr,target_hrr_encoding))
+  mutate(hrr=recode(hrr, 
+                        '109' = 'CT - Bridgeport',
+                        '110'	= 'CT - Hartford',
+                        '111'	= 'CT - New Haven',
+                        '221'	= 'ME - Bangor',
+                        '222'	= 'ME - Portland',
+                        '227'	= 'MA - Boston',
+                        '230'	= 'MA - Springfield',
+                        '231'	= 'MA - Worcester',
+                        '281'	= 'NH - Lebanon',
+                        '282'	= 'NH - Manchester',
+                        '295'	= 'NY - Albany',
+                        '364'	= 'RI - Providence',
+                        '424'	= 'VT - Burlington'))
 ```
 
 ## Hospital Utilization Rates by HRR (Slide 6)
@@ -696,7 +709,7 @@ df <- read.csv( turl ) %>% tidyr::pivot_longer( cols = starts_with("X")
                                   , values_to = "value",  values_drop_na = TRUE ) %>%
               mutate( date=as.Date(gsub("\\.","\\/",date), format="%m/%d/%y")
                       , location=sprintf("%05d", FIPS) ) %>%
-              filter( substr(location, start=1, stop=2) %in% target_statefips )
+              filter( substr(location, start=1, stop=2) %in% c(target_statefips, '36') )
 ens_hist <- df %>% filter( nchar(location)==5 ) # location == '25' & 
 latest_history_date <- max(ens_hist$date)
 tmp <- latest_history_date - min(ens_hist$date)
@@ -704,7 +717,7 @@ npastdays <- tmp[[1]] + 1
 
 latest_forecast_date <- date_latest_forecast
 eurl <- paste0('https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/COVIDhub-ensemble/' 
-               , s, '-COVIDhub-ensemble.csv')
+               , date_latest_forecast, '-COVIDhub-ensemble.csv')
 
 df <- read.table( eurl, sep = ',', header = T ) # fields are explained in https://github.com/reichlab/covid19-forecast-hub/blob/master/data-processed/README.md#quantile
 
@@ -715,7 +728,7 @@ df <- read.table( eurl, sep = ',', header = T ) # fields are explained in https:
 # location: FIPS (we get 5-digit that represent counties)
 # type/quantile: we get median
 ens_fcst <- df %>%
-  filter( substr(location, start=1, stop=2) %in% NEstfips    # New England states only
+  filter( substr(location, start=1, stop=2) %in% c(target_statefips, '36')    # New England states only
          & forecast_date==latest_forecast_date & grepl( '[1-4] wk ahead inc case', target )
          & nchar(location)==5  # county data only
          & type=='quantile' & (quantile %in% quants) )  # filter desired quantiles
@@ -832,7 +845,7 @@ cumulhrrs_forecast <- bind_rows(tmp)
 cumulhrrs <- bind_rows( cumulhrrs_history, cumulhrrs_forecast )
 
 fname <- paste0('HRR_Forecast_cumul_',latest_history_date,'.xlsx')
-write.xlsx( filter( cumulhrrs, date >= "2021-05-30" ), fname ) 
+openxlsx::write.xlsx( filter( cumulhrrs, date >= "2021-05-30" ), fname ) 
 
 # DEBUG - 14-day rolling average of new cases per 100K people,
 # to benchmark with https://www.dartmouthatlas.org/covid-19/hrr-mapping/
@@ -849,7 +862,7 @@ for ( col in 3:length(colseq) ){
                                       , k=14, fill=NA, align="right" )
 }
 fname <- paste0('HRR_Forecast100K14d_',latest_history_date,'.xlsx')
-write.xlsx( inchrrs100k, fname ) 
+openxlsx::write.xlsx( inchrrs100k, fname ) 
 
 c <- unique(ens_fcst$location)
 s <- sample( c, 16, replace = FALSE )
